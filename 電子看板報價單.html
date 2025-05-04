@@ -24,6 +24,11 @@
       align-items: center;
       margin-bottom: 10px;
     }
+    .form-row input[type="radio"] {
+      width: auto;
+      margin-left: 10px;
+      margin-right: 4px;
+    }
     .result {
       margin-top: 20px;
       padding: 10px;
@@ -31,6 +36,10 @@
       border-radius: 8px;
     }
     #ledDiagram {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
       margin-top: 20px;
       border: 1px solid #ccc;
       padding: 10px;
@@ -38,6 +47,9 @@
     }
     canvas {
       border: 1px solid #999;
+      width: 100%;
+      max-width: 600px;
+      height: auto;
     }
   </style>
 </head>
@@ -54,11 +66,11 @@
     </div>
     <div class="form-row">
       <label>模組類型：</label>
-      <select id="moduleType" onchange="syncModuleDimensions()">
-        <option value="P2.5">P2.5</option>
-        <option value="P5">P5</option>
-      </select>
-      <label style="margin-left: 10px;">單價：</label>
+      <input type="radio" name="moduleType" value="P2.5" id="typeP25" checked onchange="syncModuleType()"> <label for="typeP25">P2.5</label>
+      <input type="radio" name="moduleType" value="P5" id="typeP5" onchange="syncModuleType()"> <label for="typeP5">P5</label>
+    </div>
+    <div class="form-row">
+      <label for="customUnitPrice">單價（元/片）：</label>
       <input type="number" id="customUnitPrice" placeholder="輸入單價" />
     </div>
     <div class="form-row">
@@ -83,7 +95,7 @@
 
   <div id="ledDiagram" style="display: none">
     <h3>LED 電子看板示意圖</h3>
-    <canvas id="canvas" width="500" height="300"></canvas>
+    <canvas id="canvas"></canvas>
   </div>
 
   <script>
@@ -109,15 +121,15 @@
       document.getElementById("heightCount").value = Math.floor(customHeight / moduleHeight);
     }
 
-    function syncModuleDimensions() {
-      const type = document.getElementById("moduleType").value;
+    function syncModuleType() {
+      const selectedType = document.querySelector('input[name="moduleType"]:checked').value;
       const priceInput = document.getElementById("customUnitPrice");
-      priceInput.value = prices[type].defaultUnitPrice;
+      priceInput.value = prices[selectedType].defaultUnitPrice;
       syncDimensionsFromCount();
     }
 
     function calculateQuote() {
-      const type = document.getElementById("moduleType").value;
+      const type = document.querySelector('input[name="moduleType"]:checked').value;
       const width = parseInt(document.getElementById("widthCount").value);
       const height = parseInt(document.getElementById("heightCount").value);
       const unitPrice = parseInt(document.getElementById("customUnitPrice").value) || prices[type].defaultUnitPrice;
@@ -138,13 +150,16 @@
       document.getElementById("totalPrice").textContent = totalPrice.toLocaleString();
 
       document.getElementById("resultArea").style.display = "block";
-
       drawDiagram(totalWidth, totalHeight, width, height);
     }
 
     function drawDiagram(widthCm, heightCm, modWidth, modHeight) {
       const canvas = document.getElementById("canvas");
       const ctx = canvas.getContext("2d");
+
+      canvas.width = Math.min(window.innerWidth * 0.9, 600);
+      canvas.height = canvas.width * 0.6;
+
       ctx.clearRect(0, 0, canvas.width, canvas.height);
 
       const scale = Math.min(canvas.width / widthCm, canvas.height / heightCm) * 0.8;
@@ -153,14 +168,17 @@
       const offsetX = (canvas.width - rectWidth) / 2;
       const offsetY = (canvas.height - rectHeight) / 2;
 
+      // 外框
       ctx.strokeStyle = "#000";
       ctx.lineWidth = 2;
       ctx.strokeRect(offsetX, offsetY, rectWidth, rectHeight);
 
-      ctx.strokeStyle = "#fff";
+      // 模組格線
+      ctx.strokeStyle = "#ccc";
       ctx.lineWidth = 0.5;
-      const cellWidth = (moduleWidth * scale);
-      const cellHeight = (moduleHeight * scale);
+      const cellWidth = moduleWidth * scale;
+      const cellHeight = moduleHeight * scale;
+
       for (let i = 1; i < modWidth; i++) {
         ctx.beginPath();
         ctx.moveTo(offsetX + i * cellWidth, offsetY);
@@ -174,15 +192,16 @@
         ctx.stroke();
       }
 
+      // 標註
       ctx.fillStyle = "#000";
       ctx.font = "14px Arial";
-      ctx.fillText(`${widthCm} cm (${modWidth} 模組)`, offsetX + rectWidth / 2 - 60, offsetY - 10);
-      ctx.fillText(`${heightCm} cm (${modHeight} 模組)`, offsetX - 90, offsetY + rectHeight / 2);
+      ctx.fillText(`${widthCm} cm（${modWidth} 模組）`, offsetX + rectWidth / 2 - 60, offsetY - 10);
+      ctx.fillText(`${heightCm} cm（${modHeight} 模組）`, offsetX - 120, offsetY + rectHeight / 2);
 
       document.getElementById("ledDiagram").style.display = "block";
     }
 
-    window.onload = syncModuleDimensions;
+    window.onload = syncModuleType;
   </script>
 </body>
 </html>
